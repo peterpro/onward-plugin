@@ -135,6 +135,10 @@ test("generates host-specific marketplaces with both environment packages", asyn
   }
 
   assert.equal(claudeMarketplace.name, "onward-plugins");
+  assert.equal(
+    claudeMarketplace.description,
+    "Secure Stage and Prod integrations for the Onward task workspace."
+  );
   assert.equal(claudeMarketplace.owner.name, "Onward");
   assert.deepEqual(
     claudeMarketplace.plugins.map((plugin) => plugin.name),

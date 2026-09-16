@@ -1,5 +1,6 @@
 {
   "name": "onward-plugins",
+  "description": "Secure Stage and Prod integrations for the Onward task workspace.",
   "owner": {
     "name": "Onward"
   },

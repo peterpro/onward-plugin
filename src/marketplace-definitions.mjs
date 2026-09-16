@@ -37,6 +37,7 @@ export function buildCodexMarketplace() {
 export function buildClaudeMarketplace() {
   return {
     name: marketplaceName,
+    description: "Secure Stage and Prod integrations for the Onward task workspace.",
     owner: {
       name: "Onward"
     },
