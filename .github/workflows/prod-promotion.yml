@@ -150,6 +150,10 @@ jobs:
             echo "The selected Prod release tag already exists"
             exit 1
           fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "The selected Prod Git tag already exists"
+            exit 1
+          fi
 
       - name: Write promoted provenance manifest
         shell: bash
