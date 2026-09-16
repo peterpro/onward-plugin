@@ -1,0 +1,7 @@
+{
+  "name": "onward-prod",
+  "version": "0.1.2",
+  "displayName": "Onward",
+  "resourceUrl": "https://onwards.work/mcp",
+  "supabaseUrl": "https://iwzpjugiwghzbcwslpzm.supabase.co"
+}

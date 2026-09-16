@@ -1,0 +1,14 @@
+{
+  "name": "onward-stage",
+  "version": "0.1.2-stage.1",
+  "description": "Read and manage your own Onward tasks through a secure MCP connection.",
+  "author": {
+    "name": "Onward"
+  },
+  "license": "Proprietary",
+  "keywords": [
+    "productivity",
+    "tasks",
+    "mcp"
+  ]
+}

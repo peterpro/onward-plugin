@@ -1,0 +1,169 @@
+name: Prod promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage_tag:
+        description: Existing Stage prerelease tag accepted by the host and account checks
+        required: true
+        type: string
+      release_tag:
+        description: Prod tag, matching the Prod package version
+        required: true
+        type: string
+      acceptance_status:
+        description: Must be exactly accepted after Stage validation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  read_stage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      STAGE_TAG: ${{ inputs.stage_tag }}
+    outputs:
+      source_sha: ${{ steps.manifest.outputs.source_sha }}
+    steps:
+      - name: Read Stage release metadata
+        id: manifest
+        shell: bash
+        run: |
+          stage_prerelease="$(gh release view "$STAGE_TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq '.isPrerelease')"
+          if [ "$stage_prerelease" != "true" ]; then
+            echo "The selected Stage release is not a prerelease"
+            exit 1
+          fi
+          mkdir -p stage-metadata
+          gh release download "$STAGE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "release-manifest.json" --dir stage-metadata --clobber
+          source_sha="$(jq -er --arg tag "$STAGE_TAG" '
+            select(.schemaVersion == 1 and .releaseTag == $tag) |
+            .sourceSha | select(test("^[0-9a-f]{40}$"))
+          ' stage-metadata/release-manifest.json)"
+          jq -e '
+            ([.packages[] | select(.name == "onward-stage") | .archive.sha256] | length == 1) and
+            ([.packages[] | select(.name == "onward-prod") | .archive.sha256] | length == 1)
+          ' stage-metadata/release-manifest.json >/dev/null
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+
+  verify:
+    if: github.ref == 'refs/heads/main'
+    needs: read_stage
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SOURCE_SHA: ${{ needs.read_stage.outputs.source_sha }}
+      STAGE_TAG: ${{ inputs.stage_tag }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Check out exact accepted source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.read_stage.outputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Verify Stage tag resolves to manifest source
+        shell: bash
+        run: |
+          git fetch origin "refs/tags/$STAGE_TAG:refs/tags/$STAGE_TAG"
+          stage_commit="$(git rev-parse "$STAGE_TAG^{commit}")"
+          if [ "$stage_commit" != "$RELEASE_SOURCE_SHA" ]; then
+            echo "Stage tag does not resolve to the manifest source SHA"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$RELEASE_SOURCE_SHA" origin/main; then
+            echo "Stage source SHA is not an ancestor of protected main"
+            exit 1
+          fi
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 11.7.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify source and generated outputs
+        run: |
+          pnpm check
+          git diff --exit-code -- plugins .agents/plugins .claude-plugin
+          git diff --check
+          node scripts/validate-release.mjs --channel prod --tag "$RELEASE_TAG" --source-sha "$RELEASE_SOURCE_SHA"
+
+      - name: Verify exact Prod asset from Stage
+        shell: bash
+        run: |
+          mkdir -p release-artifacts
+          gh release download "$STAGE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "onward-prod-*.zip" --pattern "release-manifest.json" --dir release-artifacts --clobber
+          prod_version="$(node -e "import('./src/package-definitions.mjs').then(({ environments }) => console.log(environments.find((environment) => environment.name === 'onward-prod').version))")"
+          test -f "release-artifacts/onward-prod-$prod_version.zip"
+          node scripts/validate-promotion.mjs --manifest release-artifacts/release-manifest.json --source-sha "$RELEASE_SOURCE_SHA" --stage-tag "$STAGE_TAG" --package-name onward-prod --package-version "$prod_version" --archive "release-artifacts/onward-prod-$prod_version.zip"
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: [read_stage, verify]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      RELEASE_SOURCE_SHA: ${{ needs.read_stage.outputs.source_sha }}
+      STAGE_TAG: ${{ inputs.stage_tag }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      ACCEPTANCE_STATUS: ${{ inputs.acceptance_status }}
+    steps:
+      - name: Fetch verified Prod asset from Stage
+        shell: bash
+        run: |
+          if [ "$ACCEPTANCE_STATUS" != "accepted" ]; then
+            echo "acceptance_status must be exactly accepted"
+            exit 1
+          fi
+          mkdir -p release-artifacts
+          gh release download "$STAGE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "onward-prod-*.zip" --pattern "release-manifest.json" --dir release-artifacts --clobber
+          prod_version="$(jq -er '.packages[] | select(.name == "onward-prod") | .version' release-artifacts/release-manifest.json)"
+          prod_archive="release-artifacts/onward-prod-$prod_version.zip"
+          test -f "$prod_archive"
+          expected_sha="$(jq -er '.packages[] | select(.name == "onward-prod") | .archive.sha256 | select(test("^[0-9a-f]{64}$"))' release-artifacts/release-manifest.json)"
+          actual_sha="$(sha256sum "$prod_archive" | cut -d ' ' -f 1)"
+          if [ "$actual_sha" != "$expected_sha" ]; then
+            echo "Prod asset checksum does not match Stage provenance"
+            exit 1
+          fi
+          jq -e --arg source "$RELEASE_SOURCE_SHA" --arg stage "$STAGE_TAG" '
+            .sourceSha == $source and .releaseTag == $stage and
+            ([.packages[] | select(.name == "onward-prod") | .archive.sha256] | length == 1)
+          ' release-artifacts/release-manifest.json >/dev/null
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "The selected Prod release tag already exists"
+            exit 1
+          fi
+
+      - name: Write promoted provenance manifest
+        shell: bash
+        run: |
+          jq --arg release "$RELEASE_TAG" --arg stage "$STAGE_TAG" '
+            .releaseTag = $release |
+            .stageTag = $stage |
+            .acceptanceStatus = "accepted" |
+            .promotedFromStageTag = $stage
+          ' release-artifacts/release-manifest.json > release-artifacts/release-manifest-prod.json
+          mv release-artifacts/release-manifest-prod.json release-artifacts/release-manifest.json
+
+      - name: Publish Prod stable release
+        shell: bash
+        run: |
+          prod_version="$(jq -er '.packages[] | select(.name == "onward-prod") | .version' release-artifacts/release-manifest.json)"
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SOURCE_SHA" --title "Onward Prod $RELEASE_TAG" --notes "Promoted from Stage release $STAGE_TAG after acceptance of $RELEASE_SOURCE_SHA." "release-artifacts/onward-prod-$prod_version.zip" release-artifacts/release-manifest.json

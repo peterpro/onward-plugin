@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "onward": {
+      "type": "http",
+      "url": "https://onwards.work/mcp",
+      "oauth": {
+        "authServerMetadataUrl": "https://iwzpjugiwghzbcwslpzm.supabase.co/.well-known/oauth-authorization-server/auth/v1",
+        "scopes": "openid"
+      }
+    }
+  }
+}

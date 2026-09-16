@@ -1,0 +1,7 @@
+{
+  "name": "onward-stage",
+  "version": "0.1.2-stage.1",
+  "displayName": "Onward Stage",
+  "resourceUrl": "https://onward-mvp-production-a0ee.up.railway.app/mcp",
+  "supabaseUrl": "https://nduxdcqcizvqbmqzxeod.supabase.co"
+}

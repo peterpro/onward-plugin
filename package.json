@@ -1,0 +1,17 @@
+{
+  "name": "onward-plugin-packages",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic Onward MCP plugin packages for Stage and Prod.",
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/build.mjs && node --test tests/*.test.mjs",
+    "release:manifest": "node scripts/write-release-manifest.mjs"
+  }
+}

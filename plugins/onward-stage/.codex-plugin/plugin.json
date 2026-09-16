@@ -1,0 +1,27 @@
+{
+  "name": "onward-stage",
+  "version": "0.1.2-stage.1",
+  "description": "Read and manage your own Onward tasks through a secure MCP connection.",
+  "author": {
+    "name": "Onward"
+  },
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Onward Stage",
+    "shortDescription": "Read and manage your own Onward tasks in an AI workspace.",
+    "longDescription": "Read and manage your own Onward tasks through a secure MCP connection with OAuth authorization.",
+    "developerName": "Onward",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://onwards.work",
+    "defaultPrompt": [
+      "List my active Onward tasks.",
+      "Show my archived Onward tasks for a project.",
+      "Block my task and include the blocker reason."
+    ],
+    "brandColor": "#1F6FEB"
+  }
+}

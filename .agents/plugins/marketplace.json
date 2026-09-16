@@ -1,0 +1,32 @@
+{
+  "name": "onward-plugins",
+  "interface": {
+    "displayName": "Onward Plugins"
+  },
+  "plugins": [
+    {
+      "name": "onward-stage",
+      "source": {
+        "source": "local",
+        "path": "./plugins/onward-stage"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "onward-prod",
+      "source": {
+        "source": "local",
+        "path": "./plugins/onward-prod"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

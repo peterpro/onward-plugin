@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "onward": {
+      "type": "http",
+      "url": "https://onward-mvp-production-a0ee.up.railway.app/mcp",
+      "oauth": {
+        "authServerMetadataUrl": "https://nduxdcqcizvqbmqzxeod.supabase.co/.well-known/oauth-authorization-server/auth/v1",
+        "scopes": "openid"
+      }
+    }
+  }
+}

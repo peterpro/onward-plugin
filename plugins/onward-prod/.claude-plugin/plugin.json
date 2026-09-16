@@ -1,0 +1,14 @@
+{
+  "name": "onward-prod",
+  "version": "0.1.2",
+  "description": "Read and manage your own Onward tasks through a secure MCP connection.",
+  "author": {
+    "name": "Onward"
+  },
+  "license": "Proprietary",
+  "keywords": [
+    "productivity",
+    "tasks",
+    "mcp"
+  ]
+}

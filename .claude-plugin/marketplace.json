@@ -1,0 +1,22 @@
+{
+  "name": "onward-plugins",
+  "owner": {
+    "name": "Onward"
+  },
+  "plugins": [
+    {
+      "name": "onward-stage",
+      "source": "./plugins/onward-stage",
+      "version": "0.1.2-stage.1",
+      "description": "Read and manage your own Onward tasks through a secure MCP connection.",
+      "category": "Productivity"
+    },
+    {
+      "name": "onward-prod",
+      "source": "./plugins/onward-prod",
+      "version": "0.1.2",
+      "description": "Read and manage your own Onward tasks through a secure MCP connection.",
+      "category": "Productivity"
+    }
+  ]
+}

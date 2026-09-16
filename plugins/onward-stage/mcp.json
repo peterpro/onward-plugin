@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "onward": {
+      "type": "streamable-http",
+      "url": "https://onward-mvp-production-a0ee.up.railway.app/mcp"
+    }
+  }
+}

@@ -1,0 +1,128 @@
+name: Stage prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact committed source SHA to package
+        required: true
+        type: string
+      release_tag:
+        description: Stage tag, matching the Stage package version
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_SOURCE_SHA: ${{ inputs.source_sha }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    outputs:
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Verify source is an ancestor of main
+        id: source
+        shell: bash
+        run: |
+          if [[ ! "$RELEASE_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_sha must be a 40-character commit SHA"
+            exit 1
+          fi
+          if [ "$(git rev-parse HEAD)" != "$RELEASE_SOURCE_SHA" ]; then
+            echo "Checked out source does not match source_sha"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$RELEASE_SOURCE_SHA" origin/main; then
+            echo "source_sha is not an ancestor of protected main"
+            exit 1
+          fi
+          echo "source_sha=$RELEASE_SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 11.7.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify source and generated outputs
+        run: |
+          pnpm check
+          git diff --exit-code -- plugins .agents/plugins .claude-plugin
+          git diff --check
+          node scripts/validate-release.mjs --channel stage --tag "$RELEASE_TAG" --source-sha "$RELEASE_SOURCE_SHA"
+
+      - name: Build deterministic release assets
+        shell: bash
+        run: |
+          mkdir -p release-artifacts
+          stage_version="$(node -e "import('./src/package-definitions.mjs').then(({ environments }) => console.log(environments.find((environment) => environment.name === 'onward-stage').version))")"
+          prod_version="$(node -e "import('./src/package-definitions.mjs').then(({ environments }) => console.log(environments.find((environment) => environment.name === 'onward-prod').version))")"
+          find plugins/onward-stage plugins/onward-prod -type f -exec touch -t 200001010000 {} +
+          (cd plugins/onward-stage && find . -type f -print | LC_ALL=C sort | zip -X -q -@ "../../release-artifacts/onward-stage-$stage_version.zip")
+          (cd plugins/onward-prod && find . -type f -print | LC_ALL=C sort | zip -X -q -@ "../../release-artifacts/onward-prod-$prod_version.zip")
+          pnpm release:manifest
+
+      - name: Upload release assets for publish
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stage-release-assets
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      RELEASE_SOURCE_SHA: ${{ needs.verify.outputs.source_sha }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Download verified release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: stage-release-assets
+          path: release-artifacts
+
+      - name: Verify release provenance
+        shell: bash
+        run: |
+          test -f release-artifacts/release-manifest.json
+          jq -e --arg sha "$RELEASE_SOURCE_SHA" --arg tag "$RELEASE_TAG" '
+            .schemaVersion == 1 and
+            .sourceSha == $sha and
+            .releaseTag == $tag and
+            ([.packages[] | select(.name == "onward-stage") | .archive.sha256] | length == 1) and
+            ([.packages[] | select(.name == "onward-prod") | .archive.sha256] | length == 1)
+          ' release-artifacts/release-manifest.json >/dev/null
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "The selected Stage release tag already exists"
+            exit 1
+          fi
+
+      - name: Publish Stage prerelease
+        run: |
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SOURCE_SHA" --title "Onward Stage $RELEASE_TAG" --notes "Stage candidate built from $RELEASE_SOURCE_SHA. Prod asset is retained for promotion from this exact source." --prerelease release-artifacts/*
