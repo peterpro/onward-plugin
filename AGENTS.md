@@ -324,7 +324,7 @@ The raw catalog URLs are useful for inspection:
     https://raw.githubusercontent.com/peterpro/onward-plugin/main/.agents/plugins/marketplace.json
     https://raw.githubusercontent.com/peterpro/onward-plugin/main/.claude-plugin/marketplace.json
 
-For the example release train, the pinned marketplace sources are:
+For the current release train, the pinned marketplace sources are:
 
 | Channel | Codex marketplace source | Claude Code marketplace source | Package path |
 | --- | --- | --- | --- |

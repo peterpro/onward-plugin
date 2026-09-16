@@ -56,6 +56,7 @@ Prod:
     codex plugin marketplace add https://github.com/peterpro/onward-plugin.git --ref v0.1.2 --sparse .agents/plugins --sparse plugins
     claude plugin marketplace add https://github.com/peterpro/onward-plugin.git#v0.1.2 --sparse .claude-plugin plugins
 
-The example tags are release-plan placeholders until the first GitHub release.
-Do not put credentials into package configuration. OAuth is completed by the
-host when the MCP resource is connected.
+The Stage tag `v0.1.2-stage.1` is published as a prerelease. The Prod tag
+`v0.1.2` is reserved for promotion after Stage acceptance. Do not put
+credentials into package configuration. OAuth is completed by the host when
+the MCP resource is connected.
