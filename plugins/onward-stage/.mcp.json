@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "onward": {
+    "onward-stage": {
       "type": "http",
       "url": "https://onward-mvp-production-a0ee.up.railway.app/mcp",
       "oauth": {
