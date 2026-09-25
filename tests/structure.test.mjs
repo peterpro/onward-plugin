@@ -49,7 +49,8 @@ test("generates the expected Stage and Prod package roots", async () => {
     ".codex-plugin/plugin.json",
     ".mcp.json",
     "mcp.json",
-    "plugin.json"
+    "plugin.json",
+    "skills/onward-connection-guard/SKILL.md"
   ];
 
   for (const environment of environments) {
@@ -64,20 +65,32 @@ test("generates the expected Stage and Prod package roots", async () => {
 
     const mcp = await readPluginJson(environment.name, "mcp.json");
     assert.equal(mcp.$schema, "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json");
-    assert.equal(mcp.mcpServers.onward.type, "streamable-http");
-    assert.equal(mcp.mcpServers.onward.url, environment.resourceUrl);
+    assert.deepEqual(Object.keys(mcp.mcpServers), [environment.mcpServerName]);
+    assert.equal(mcp.mcpServers[environment.mcpServerName].type, "streamable-http");
+    assert.equal(mcp.mcpServers[environment.mcpServerName].url, environment.resourceUrl);
 
     const codex = await readPluginJson(environment.name, ".codex-plugin/plugin.json");
     assert.equal(codex.mcpServers, "./.mcp.json");
 
     const claude = await readPluginJson(environment.name, ".mcp.json");
-    assert.equal(claude.mcpServers.onward.type, "http");
-    assert.equal(claude.mcpServers.onward.url, environment.resourceUrl);
-    assert.equal(claude.mcpServers.onward.oauth.scopes, "openid");
+    assert.deepEqual(Object.keys(claude.mcpServers), [environment.mcpServerName]);
+    assert.equal(claude.mcpServers[environment.mcpServerName].type, "http");
+    assert.equal(claude.mcpServers[environment.mcpServerName].url, environment.resourceUrl);
+    assert.equal(claude.mcpServers[environment.mcpServerName].oauth.scopes, "openid");
     assert.equal(
-      claude.mcpServers.onward.oauth.authServerMetadataUrl,
+      claude.mcpServers[environment.mcpServerName].oauth.authServerMetadataUrl,
       environment.supabaseUrl + "/.well-known/oauth-authorization-server/auth/v1"
     );
+
+    const skill = await readFile(
+      path.join(pluginsRoot, environment.name, "skills/onward-connection-guard/SKILL.md"),
+      "utf8"
+    );
+    assert.match(skill, /^---\nname: onward-connection-guard\ndescription: /);
+    assert.equal(skill.startsWith('"'), false);
+    assert.match(skill, new RegExp("alias is \\`" + environment.mcpServerName + "\\`"));
+    assert.match(skill, /BLOCKED\/UNVERIFIED/);
+    assert.match(skill, /Do not claim that there are no tasks/);
   }
 });
 

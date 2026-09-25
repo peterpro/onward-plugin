@@ -32,7 +32,10 @@ function assertOutputPath(target) {
 
 async function writeJson(target, value) {
   await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  const contents = typeof value === "string"
+    ? value
+    : `${JSON.stringify(value, null, 2)}\n`;
+  await writeFile(target, contents, "utf8");
 }
 
 async function buildEnvironment(environment) {

@@ -16,8 +16,8 @@ Updated: 2026-09-16
 | Codex marketplace catalog | PASS | PASS | `.agents/plugins/marketplace.json` |
 | Claude Code marketplace catalog | PASS | PASS | `.claude-plugin/marketplace.json` |
 
-The Stage artifact is `onward-stage` version `0.1.2-stage.1`. The Prod artifact
-is `onward-prod` version `0.1.2`. Their resource URLs, Supabase metadata URLs
+The next Stage artifact is `onward-stage` version `0.1.3-stage.1`. The next Prod artifact
+is `onward-prod` version `0.1.3`. Their resource URLs, Supabase metadata URLs
 and package identities are separate. Both hosted Supabase projects have OAuth
 Server, `/oauth/consent`, and dynamic client registration enabled.
 
@@ -53,7 +53,8 @@ exposes the fixed owner-scoped task-management tool set.
 1. Select the package directory for exactly one environment.
 2. Add that package as a local plugin in the target host's desktop or native
    plugin surface.
-3. Enable the `onward` MCP connection and start its connect action.
+3. Enable the package MCP connection and start its connect action. The Stage
+   alias is `onward-stage`, and the Prod alias is `onward`.
 4. Complete the browser OAuth flow with an existing account from the same
    environment. Review the Onward task-list access request before approval.
 5. Confirm `tools/list` exposes `list_tasks`, `get_task`, `create_task`,

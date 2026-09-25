@@ -8,7 +8,8 @@ Onward environments:
 
 Both packages are generated from the same source definitions. The portable
 root files are `plugin.json` and `mcp.json`. Compatibility files for Codex and
-Claude are emitted alongside them, and do not contain credentials.
+Claude are emitted alongside them, and do not contain credentials. The Stage
+MCP alias is `onward-stage`, while the Prod MCP alias remains `onward`.
 
 Environment data is kept in `config/environments/`. The shared package
 contract lives in `src/shared/`, while `src/package-definitions.mjs` loads the
@@ -46,17 +47,21 @@ the same package definitions:
 The catalogs expose both `onward-stage` and `onward-prod`. For a release
 snapshot, add the GitHub repository at the corresponding immutable tag.
 
+The next release train is `0.1.3-stage.1` for Stage and `0.1.3` for Prod.
+
 Stage:
 
-    codex plugin marketplace add https://github.com/peterpro/onward-plugin.git --ref v0.1.2-stage.1 --sparse .agents/plugins --sparse plugins
-    claude plugin marketplace add https://github.com/peterpro/onward-plugin.git#v0.1.2-stage.1 --sparse .claude-plugin plugins
+    codex plugin marketplace add https://github.com/peterpro/onward-plugin.git --ref v0.1.3-stage.1 --sparse .agents/plugins --sparse plugins
+    claude plugin marketplace add https://github.com/peterpro/onward-plugin.git#v0.1.3-stage.1 --sparse .claude-plugin plugins
 
 Prod:
 
-    codex plugin marketplace add https://github.com/peterpro/onward-plugin.git --ref v0.1.2 --sparse .agents/plugins --sparse plugins
-    claude plugin marketplace add https://github.com/peterpro/onward-plugin.git#v0.1.2 --sparse .claude-plugin plugins
+    codex plugin marketplace add https://github.com/peterpro/onward-plugin.git --ref v0.1.3 --sparse .agents/plugins --sparse plugins
+    claude plugin marketplace add https://github.com/peterpro/onward-plugin.git#v0.1.3 --sparse .claude-plugin plugins
 
-The Stage tag `v0.1.2-stage.1` is published as a prerelease. The Prod tag
-`v0.1.2` is reserved for promotion after Stage acceptance. Do not put
+The Stage tag `v0.1.3-stage.1` must be published as a prerelease. The Prod tag
+`v0.1.3` is reserved for promotion after Stage acceptance. Do not put
 credentials into package configuration. OAuth is completed by the host when
-the MCP resource is connected.
+the MCP resource is connected. If the connection is unavailable, the bundled
+connection-guard skill requires an explicit `BLOCKED/UNVERIFIED` result rather
+than an inferred empty task list.
